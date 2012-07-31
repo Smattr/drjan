@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+
+from authority import *
+from utils.config import Conf
+from utils.database import Database
+import getopt
+import sys
+
+def parseArguments(options):
+    opts, args = getopt.getopt(sys.argv[1:], 'c:d:o:', [
+        'config=',
+        'database=',
+        'override=',
+    ])
+    for o, a in opts:
+        if o in ('-c', '--config'):
+            options['config'] = a
+        elif o in ('-d', '--database'):
+            options['database'] = a
+        elif o in ('-o', '--override'):
+            s = a.split('.')
+            section = s[0]
+            remainder = '.'.join(s[1:])
+            s = remainder.split('=')
+            key = s[0]
+            value = '='.join(s[1:])
+            options['override'].append({
+                'section':section,
+                'key':key,
+                'value':value,
+            })
+
+def main():
+    options = {
+        'config':None,
+        'database':None,
+        'override':[],
+    }
+    try:
+        parseArguments(options)
+    except:
+        print >>sys.stderr, 'Failed to parse options: %s' % sys.exc_info()[1]
+        return -1
+
+    config = None
+    try:
+        config = Conf(options['config'])
+    except:
+        print >>sys.stderr, 'Failed to parse configuration: %s' % sys.exc_info()[1]
+        return -1
+
+    for i in options['override']:
+        config.set(i['section'], i['key'], i['value'])
+
+    database = None
+    try:
+        database = Database(options['database'])
+    except:
+        print >>sys.stderr, 'Failed to connect to database: %s' % sys.exc_info()[1]
+        return -1
+
+    a = System.System()
+    users = a.get_users()
+    groups = a.get_groups()
+    print users[0]
+    print groups[0]
+    print config.get('hello', 'world')
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
